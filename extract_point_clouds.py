@@ -18,7 +18,18 @@ project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from data.dataloader import SynapseDataLoader
+# Handle imports more robustly
+try:
+    from data.dataloader import SynapseDataLoader
+except ImportError as e:
+    print(f"Error importing SynapseDataLoader: {e}")
+    print("Make sure you're running this script from the project root directory")
+    print("Current working directory:", os.getcwd())
+    print("Files in current directory:", os.listdir("."))
+    print("Files in data directory (if it exists):", 
+          os.listdir("data") if os.path.exists("data") else "data directory not found")
+    sys.exit(1)
+
 from models.contrastive_model import PointCloudEncoder
 
 

@@ -12,8 +12,12 @@ from scipy import ndimage
 from torchvision import transforms
 import imageio.v3 as iio
 
-# Import the config
-from synapse.utils.config import config
+# Replace external import with a simple config class
+class Config:
+    def __init__(self):
+        self.gray_color = (0.5, 0.5, 0.5)  # Default gray color
+
+config = Config()
 
 class Synapse3DProcessor:
     def __init__(self, size=(80, 80), mean=(0.485,), std=(0.229,)):
