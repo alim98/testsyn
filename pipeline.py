@@ -161,7 +161,7 @@ class SynapsePipeline:
         print(f"  Segmentation directory: {self.seg_base_dir}")
         print(f"  Additional mask directory: {self.add_mask_base_dir}")
         print(f"  Excel file: {self.excel_file}")
-        print(f"  Bounding boxes: {self.bbox_names}")
+        print(f"  Bounding boxes: {self.args.bbox_name}")
         print(f"  Output directory: {self.output_dir}")
         print(f"  Point clouds path: {self.point_clouds_path}")
         print(f"  Model path: {self.model_path}")
@@ -180,7 +180,12 @@ class SynapsePipeline:
             self.seg_base_dir = self.args.seg_base_dir
             self.add_mask_base_dir = self.args.add_mask_base_dir
             self.excel_file = self.args.excel_file  # Fix: use excel_file instead of excel_dir
-            self.bbox_names = self.args.bbox_name
+        else:
+            # Use paths from args
+            self.raw_base_dir = self.args.raw_base_dir
+            self.seg_base_dir = self.args.seg_base_dir
+            self.add_mask_base_dir = self.args.add_mask_base_dir
+            self.excel_file = self.args.excel_file
         
         # Output directory
         self.output_dir = os.path.join("results")
@@ -209,7 +214,7 @@ class SynapsePipeline:
         all_synapses = []
         
         # For each bounding box, find and load the corresponding Excel file
-        for bbox in self.bbox_names:
+        for bbox in self.args.bbox_name:
             excel_path = os.path.join(self.excel_file, f"{bbox}.xlsx")
             if os.path.exists(excel_path):
                 try:
@@ -267,7 +272,7 @@ class SynapsePipeline:
             print(f"Using {max_workers} CPU cores for parallel processing")
             
             # Process each bounding box
-            for bbox_name in self.bbox_names:
+            for bbox_name in self.args.bbox_name:
                 print(f"\nProcessing bounding box: {bbox_name}")
                 
                 # Load volumes for this bounding box
@@ -365,7 +370,7 @@ class SynapsePipeline:
         overall_pbar = tqdm(total=total_synapses, desc="Overall Progress", position=0)
         
         # Process each bounding box
-        for bbox_name in self.bbox_names:
+        for bbox_name in self.args.bbox_name:
             print(f"\nProcessing bounding box: {bbox_name}")
             
             # Load volumes for this bounding box
@@ -935,6 +940,14 @@ class SynapsePipeline:
             traceback.print_exc()
             return False
     
+    def _get_model_path(self):
+        """Helper method to get the model path"""
+        return self.model_path
+    
+    def _get_point_clouds_path(self):
+        """Helper method to get the point clouds path"""
+        return self.point_clouds_path
+    
     def run(self):
         """Run the complete pipeline"""
         print("\n=== Starting Synapse Analysis Pipeline ===\n")
@@ -994,8 +1007,10 @@ def main():
                       help='Device for model training (cuda or cpu)')
     
     # Paths and configuration
-    parser.add_argument('--use_default_paths', action='store_true', 
+    parser.add_argument('--use_default_paths', action='store_true', default=True,
                        help='Use default paths from config')
+    parser.add_argument('--no_default_paths', action='store_true', 
+                       help='Override use_default_paths to disable using default paths')
     parser.add_argument('--raw_base_dir', type=str, help='Base directory for raw TIF files')
     parser.add_argument('--seg_base_dir', type=str, help='Base directory for segmentation TIF files')
     parser.add_argument('--add_mask_base_dir', type=str, help='Base directory for additional mask TIF files')
@@ -1028,6 +1043,10 @@ def main():
     if args.use_mp:
         args.no_mp = False  # If --use_mp is specified, override --no_mp
     
+    # Handle conflicting paths flags
+    if args.no_default_paths:
+        args.use_default_paths = False
+    
     # If using default paths, override with config values
     if args.use_default_paths:
         args.raw_base_dir = config.raw_base_dir
@@ -1040,6 +1059,11 @@ def main():
         # Model parameters can also be taken from config
         if not hasattr(args, 'max_points') or args.max_points == 2048:
             args.max_points = config.max_points
+    
+    # Ensure bbox_name has a default value if it's still None
+    if args.bbox_name is None:
+        args.bbox_name = ['bbox1', 'bbox2', 'bbox3', 'bbox4', 'bbox5', 'bbox6', 'bbox7']
+        print(f"Using default bounding box names: {args.bbox_name}")
     
     # Create and run the pipeline
     pipeline = SynapsePipeline(args)
